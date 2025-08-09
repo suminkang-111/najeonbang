@@ -1,0 +1,14 @@
+{
+  "name": "lol-scrim-tracker-json-v5",
+  "version": "5.2.2",
+  "description": "LoL in-house tracker v5.2.2: DnD review table, player pool, champ popover fix, personal stats include self, match row colors, top-trim for labels.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "lowdb": "^7.0.1"
+  }
+}
