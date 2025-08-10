@@ -7,7 +7,7 @@ const { JSONFile } = require('lowdb/node');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+const DATA_PATH = process.env.DATA_PATH || path.join(__dirname, 'data.json');
 const adapter = new JSONFile('data.json');
 const db = new Low(adapter, { players: [], matches: [], rating_history: [] });
 
