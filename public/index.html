@@ -1,10 +1,127 @@
 <!doctype html>
 <html lang="ko">
-  <meta charset="utf-8" />
-  <title>내전 기록</title>
-  <body style="font-family:sans-serif;padding:24px">
-    <h1>내전 기록 사이트</h1>
-    <p>배포 테스트입니다. 이 화면이 보이면 정적 파일 연결은 성공!</p>
-    <p><a href="/api/players" target="_blank">/api/players 확인</a></p>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내전 전적 관리 v5.2.2</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>LoL 내전 전적 관리 v5.2.2</h1>
+    <nav>
+      <button class="tab-btn" data-tab="players">플레이어</button>
+      <button class="tab-btn" data-tab="new-match">매치 등록</button>
+      <button class="tab-btn" data-tab="matches">매치 목록</button>
+      <button class="tab-btn" data-tab="leaderboard">리더보드</button>
+      <button class="tab-btn" data-tab="zocr">이미지 등록</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="players" class="tab active">
+      <h2>플레이어</h2>
+      <form id="player-form">
+        <input required name="name" placeholder="소환사명" />
+        <button type="submit">추가</button>
+      </form>
+      <table id="players-table">
+        <thead><tr><th>이름</th><th>레이트</th><th>전적(W/L)</th><th>연승</th><th>연패</th><th>승률</th><th>관리</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="new-match" class="tab">
+      <h2>매치 등록</h2>
+      <div class="winner-toggle">
+        <label><input type="radio" name="winner" value="A" checked> 블루팀 승</label>
+        <label><input type="radio" name="winner" value="B"> 레드팀 승</label>
+        <input type="date" id="matchDate">
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>블루팀(A)</h3>
+          <div id="teamA" class="player-pool"></div>
+          <div id="teamA-setup" class="team-setup"></div>
+        </div>
+        <div>
+          <h3>레드팀(B)</h3>
+          <div id="teamB" class="player-pool"></div>
+          <div id="teamB-setup" class="team-setup"></div>
+        </div>
+      </div>
+      <div class="champion-picker">
+        <input id="champSearch" placeholder="챔피언 검색(한글)" />
+        <div id="champGrid" class="grid"></div>
+      </div>
+      <textarea id="notes" placeholder="비고(선택)"></textarea>
+      <button id="saveMatch">매치 저장</button>
+      <h3>선수 풀</h3><div id="pool" class="pool"></div>
+    </section>
+
+    <section id="matches" class="tab">
+      <h2>매치 목록</h2>
+      <table id="matches-table" class="matches-table">
+        <thead>
+          <tr><th rowspan="2">날짜</th><th rowspan="2">진영</th><th>탑</th><th>정글</th><th>미드</th><th>원딜</th><th>서폿</th><th rowspan="2">결과</th><th rowspan="2">비고</th></tr>
+          <tr><th>이름 / 챔피언</th><th>이름 / 챔피언</th><th>이름 / 챔피언</th><th>이름 / 챔피언</th><th>이름 / 챔피언</th></tr>
+        </thead><tbody></tbody>
+      </table>
+    </section>
+
+    <section id="leaderboard" class="tab">
+      <h2>리더보드</h2>
+      <table id="leaderboard-table">
+        <thead><tr><th>순위</th><th>이름</th><th>레이트</th><th>전적(W/L)</th><th>연승</th><th>연패</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="zocr" class="tab">
+      <h2>이미지 등록 (영역 지정 OCR)</h2>
+      <p>스크린샷에서 <strong>소환사명 / K·D·A</strong>만 추출합니다. 팀 배정은 수동 조정 가능.</p>
+      <input type="file" id="cropInput" accept="image/*">
+      <div class="crop-toolbar">
+        <small>TIP: 라벨 텍스트는 영역에서 빼고, KDA는 슬래시가 있는 열만 포함하세요.</small><br>
+        <span class="zone-badge">지정 대상: <strong id="activeZoneLabel">블루 닉네임</strong></span>
+        <button class="action-btn" data-zone="blue_names">블루 닉네임</button>
+        <button class="action-btn" data-zone="blue_kda">블루 KDA</button>
+        <button class="action-btn" data-zone="red_names">레드 닉네임</button>
+        <button class="action-btn" data-zone="red_kda">레드 KDA</button>
+        <button class="action-btn" id="clearLast">마지막 영역 취소</button>
+        <button class="action-btn" id="clearAll">모든 영역 초기화</button>
+      </div>
+      <canvas id="cropCanvas"></canvas>
+      <div class="control-inline"><label>상단 라벨 잘라내기(px): <input type="number" id="trimTopPx" value="28" min="0" max="120" style="width:80px"></label><button class="action-btn" id="runZoneOcr">영역 OCR 실행</button></div>
+      <div id="zonesList"></div>
+      <div id="zocrResult" class="ocr-result"></div>
+      <button class="action-btn" id="applyZoneToForm" disabled>→ 매치 등록에 채우기</button>
+    </section>
+  </main>
+
+  <!-- Personal stats modal -->
+  <div id="profileModal" class="modal hidden">
+    <div class="modal-content modal-wide">
+      <button id="closeProfile" class="close">닫기 ✕</button>
+      <h3 id="profileTitle"></h3>
+      <canvas id="profileChart" style="max-height:280px;"></canvas>
+      <table id="profileTable" class="profile-table">
+        <thead><tr>
+          <th>날짜</th><th>진영</th><th>포지션</th><th>챔피언</th><th>K/D/A</th><th>같은 팀</th><th>상대 팀</th><th>결과</th><th>Δ레이트</th>
+        </tr></thead><tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick Champion Popover -->
+  <div id="champPopover">
+    <input id="champQuickSearch" placeholder="챔피언 검색..." />
+    <div id="champQuickList" class="list"></div>
+  </div>
+
+  <footer><small>v5.2.2: DnD 검증표/플레이어풀, 팝오버 고침, 개인전적 표 개선, 승패 색상, 라벨 트림</small></footer>
+</body>
 </html>
