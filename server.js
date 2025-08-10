@@ -26,6 +26,7 @@ init();
 app.use(cors());
 app.use(express.json({ limit:'10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 function nextId(list) { let m=0; for (const it of list) m=Math.max(m, it.id||0); return m+1; }
 
@@ -148,6 +149,7 @@ app.get('/api/player/:playerId/matches', async (req,res)=>{
 });
 
 app.get('/api/export', async (req,res)=>{ await db.read(); res.json(db.data); });
+app.get('/api/health', (req,res)=>res.json({ok:true,time:new Date().toISOString()}));
 
 app.listen(PORT, ()=> console.log(`LoL scrim tracker v5.2.2 running on http://localhost:${PORT}`));
 
